@@ -1,0 +1,917 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>長度單位直觀量感建立：1mm 至 100km</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background-color: #f4f6f9;
+      color: #333;
+      overflow: hidden;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    /* 頂部固定導航按鈕 */
+    .nav-bar {
+      position: fixed;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 100;
+      display: flex;
+      gap: 6px;
+      background: rgba(255, 255, 255, 0.95);
+      padding: 6px 14px;
+      border-radius: 30px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+      backdrop-filter: blur(8px);
+      max-width: 96vw;
+      overflow-x: auto;
+    }
+    .nav-btn {
+      border: none;
+      background: transparent;
+      padding: 6px 14px;
+      font-size: 0.92rem;
+      font-weight: bold;
+      color: #555;
+      border-radius: 20px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      white-space: nowrap;
+    }
+    .nav-btn.active {
+      background-color: #0073C5;
+      color: #fff;
+    }
+
+    /* 縱向全螢幕容器 */
+    .vertical-container {
+      height: 100vh;
+      overflow-y: scroll;
+      scroll-snap-type: y mandatory;
+      scroll-behavior: smooth;
+    }
+
+    /* 各單位全螢幕 Section（避開頂部導航重疊） */
+    .unit-section {
+      height: 100vh;
+      scroll-snap-align: start;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      align-items: center;
+      padding: 78px 12px 12px;
+      position: relative;
+    }
+
+    /* 主題背景顏色 */
+    #sec-ruler { background: linear-gradient(135deg, #eef2f5, #d6e2eb); }
+    #sec-mm    { background: linear-gradient(135deg, #e3f2fd, #bbdefb); }
+    #sec-cm    { background: linear-gradient(135deg, #e8f5e9, #c8e6c9); }
+    #sec-m     { background: linear-gradient(135deg, #fff3e0, #ffe0b2); }
+    #sec-km    { background: linear-gradient(135deg, #f3e5f5, #e1bee7); }
+
+    .unit-header {
+      text-align: center;
+      margin-bottom: 6px;
+      padding: 0 10px;
+    }
+    .unit-title {
+      font-size: 2rem;
+      font-weight: 800;
+      color: #111;
+      line-height: 1.2;
+    }
+    .unit-subtitle {
+      font-size: 0.92rem;
+      color: #555;
+      font-weight: 600;
+      margin-top: 2px;
+    }
+
+    /* 提高橫向佔比：寬度增至 96vw / max-width 1280px */
+    .ruler-hero-card {
+      width: 96vw;
+      max-width: 1280px;
+      height: 72vh;
+      max-height: 650px;
+      background: #ffffff;
+      border-radius: 24px;
+      box-shadow: 0 12px 35px rgba(0, 0, 0, 0.12);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px 14px;
+      border: 2px solid rgba(0, 115, 197, 0.25);
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    /* 上方提問與答案控制列 */
+    .ruler-control-bar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .ruler-mode-btn {
+      font-size: 1.05rem;
+      font-weight: 800;
+      color: #e65100;
+      background: #fff3e0;
+      border: 2px solid #ffe0b2;
+      padding: 6px 18px;
+      border-radius: 30px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+    }
+    .ruler-mode-btn:active {
+      transform: scale(0.96);
+    }
+
+    .ans-btn {
+      background: #0073C5;
+      color: #fff;
+      border: none;
+      padding: 7px 18px;
+      font-size: 1rem;
+      font-weight: 700;
+      border-radius: 20px;
+      cursor: pointer;
+      box-shadow: 0 3px 8px rgba(0, 115, 197, 0.3);
+      transition: all 0.2s ease;
+    }
+    .ans-btn:active {
+      transform: scale(0.96);
+    }
+
+    .answer-box {
+      font-size: 1.15rem;
+      font-weight: 800;
+      color: #2e7d32;
+      background: #e8f5e9;
+      padding: 6px 18px;
+      border-radius: 20px;
+      border: 1.5px solid #a5d6a7;
+    }
+
+    .ruler-svg-wrapper {
+      width: 100%;
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 5px 0;
+    }
+
+    .ruler-svg-wrapper svg {
+      width: 100%;
+      height: 100%;
+      max-height: 380px;
+      filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.15));
+      touch-action: none;
+    }
+
+    .ruler-hero-hint {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #d84315;
+      background: #fbe9e7;
+      padding: 6px 20px;
+      border-radius: 20px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* 橫向滑動卡片容器 */
+    .horizontal-slider {
+      display: flex;
+      width: 100vw;
+      max-width: 100%;
+      overflow-x: auto;
+      scroll-snap-type: x mandatory;
+      scroll-behavior: smooth;
+      -webkit-overflow-scrolling: touch;
+      padding: 20px calc(50% - 140px);
+      gap: 15px;
+      cursor: grab;
+      align-items: center;
+    }
+    .horizontal-slider:active {
+      cursor: grabbing;
+    }
+
+    .horizontal-slider::-webkit-scrollbar { display: none; }
+    .horizontal-slider { -ms-overflow-style: none; scrollbar-width: none; }
+
+    .card {
+      flex: 0 0 280px;
+      width: 280px;
+      scroll-snap-align: center;
+      background: #ffffff;
+      border-radius: 24px;
+      padding: 24px 16px 20px;
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.05);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      position: relative;
+      transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+      transform: scale(0.82);
+      opacity: 0.35;
+      border: 2px solid transparent;
+    }
+
+    .card.active-card {
+      transform: scale(1.08);
+      opacity: 1;
+      box-shadow: 0 16px 35px rgba(0, 115, 197, 0.22);
+      border-color: rgba(0, 115, 197, 0.4);
+      z-index: 2;
+    }
+
+    .card-value {
+      background: #0073C5;
+      color: #fff;
+      font-size: 1.25rem;
+      font-weight: 800;
+      padding: 4px 18px;
+      border-radius: 20px;
+      margin-bottom: 12px;
+    }
+
+    .card-icon {
+      font-size: 4.5rem;
+      line-height: 1;
+      margin-bottom: 12px;
+    }
+
+    .card-desc {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: #2c3e50;
+      line-height: 1.35;
+      min-height: 2.7em;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .card-footer {
+      margin-top: 10px;
+      font-size: 0.82rem;
+      color: #888;
+      font-weight: 600;
+    }
+
+    @media (max-width: 360px) {
+      .horizontal-slider { padding: 20px calc(50% - 125px); }
+      .card { flex: 0 0 250px; width: 250px; }
+    }
+
+    .swipe-hint {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #555;
+      margin-top: 4px;
+      background: rgba(255, 255, 255, 0.7);
+      padding: 4px 16px;
+      border-radius: 15px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 頂部導航 -->
+  <nav class="nav-bar">
+    <button class="nav-btn active" onclick="goToUnit(0)">直尺 Ruler</button>
+    <button class="nav-btn" onclick="goToUnit(1)">毫米 mm</button>
+    <button class="nav-btn" onclick="goToUnit(2)">厘米 cm</button>
+    <button class="nav-btn" onclick="goToUnit(3)">米 m</button>
+    <button class="nav-btn" onclick="goToUnit(4)">公里 km</button>
+  </nav>
+
+  <!-- 縱向滾動容器 -->
+  <div class="vertical-container" id="verticalContainer">
+
+    <!-- 0. 獨佔一層的互動直尺 Section -->
+    <section class="unit-section" id="sec-ruler">
+      <div class="unit-header">
+        <h1 class="unit-title">互動直尺提問區</h1>
+        <p class="unit-subtitle">拖拉橙色標記至目標刻度，進行堂上提問與讀數測驗</p>
+      </div>
+
+      <!-- 擴大橫向比例的大卡片區塊 -->
+      <div class="ruler-hero-card">
+        <div class="ruler-control-bar">
+          <button class="ruler-mode-btn" id="rulerModeBtn" onclick="toggleRulerMode()">🎯 堂上提問模式</button>
+          <button class="ans-btn" id="toggleAnsBtn" onclick="toggleAnswer()">👁️ 顯示答案</button>
+          <div class="answer-box" id="answerBox" style="display: none;">
+            長度：<span id="ansText">3.5 cm (35 mm)</span>
+          </div>
+        </div>
+
+        <div class="ruler-svg-wrapper">
+          <svg id="rulerSvg" viewBox="0 0 800 220" preserveAspectRatio="xMidYMid meet"></svg>
+        </div>
+
+        <div class="ruler-hero-hint">👈 拖拉橙色倒三角形標記以指定刻度 👉</div>
+      </div>
+
+      <div class="swipe-hint">向下滑動開始探索生活例子 👇</div>
+    </section>
+
+    <!-- 1. 毫米 Section -->
+    <section class="unit-section" id="sec-mm">
+      <div class="unit-header">
+        <h1 class="unit-title">毫米 (mm)</h1>
+        <p class="unit-subtitle">測量極小或極薄物體的長度</p>
+      </div>
+
+      <div class="horizontal-slider">
+        <div class="card">
+          <div class="card-value">1 mm</div>
+          <div class="card-icon">🪙</div>
+          <div class="card-desc">1角硬幣的厚度</div>
+          <div class="card-footer">例 1 / 10</div>
+        </div>
+
+        <div class="card">
+          <div class="card-value">2 mm</div>
+          <div class="card-icon">💳</div>
+          <div class="card-desc">學生證 / 信用卡的厚度</div>
+          <div class="card-footer">例 2 / 10</div>
+        </div>
+
+        <div class="card">
+          <div class="card-value">3 mm</div>
+          <div class="card-icon">🌾</div>
+          <div class="card-desc">一粒白米的闊度</div>
+          <div class="card-footer">例 3 / 10</div>
+        </div>
+
+        <div class="card">
+          <div class="card-value">4 mm</div>
+          <div class="card-icon">✏</div>
+          <div class="card-desc">木鉛筆芯的闊度</div>
+          <div class="card-footer">例 4 / 10</div>
+        </div>
+
+        <div class="card">
+          <div class="card-value">5 mm</div>
+          <div class="card-icon">🐜</div>
+          <div class="card-desc">一隻小螞蟻的身長</div>
+          <div class="card-footer">例 5 / 10</div>
+        </div>
+
+        <div class="card">
+          <div class="card-value">6 mm</div>
+          <div class="card-icon">🫘</div>
+          <div class="card-desc">一顆綠豆的闊度</div>
+          <div class="card-footer">例 6 / 10</div>
+        </div>
+
+        <div class="card">
+          <div class="card-value">7 mm</div>
+          <div class="card-icon">📎</div>
+          <div class="card-desc">一個萬字夾的闊度</div>
+          <div class="card-footer">例 7 / 10</div>
+        </div>
+
+        <div class="card">
+          <div class="card-value">8 mm</div>
+          <div class="card-icon">☕</div>
+          <div class="card-desc">一顆咖啡豆的長度</div>
+          <div class="card-footer">例 8 / 10</div>
+        </div>
+
+        <div class="card">
+          <div class="card-value">9 mm</div>
+          <div class="card-icon">📱</div>
+          <div class="card-desc">平板電腦 (iPad) 的厚度</div>
+          <div class="card-footer">例 9 / 10</div>
+        </div>
+
+        <div class="card">
+          <div class="card-value">10 mm</div>
+          <div class="card-icon">🥜</div>
+          <div class="card-desc">花生粒的厚度<br>（等於 1 厘米！）</div>
+          <div class="card-footer">例 10 / 10 ➔ 銜接下一單位</div>
+        </div>
+      </div>
+
+      <div class="swipe-hint">👈 左右拖拽/手指滑動切換例子 ｜ 向下滑動切換厘米 👉</div>
+    </section>
+
+    <!-- 2. 厘米 Section -->
+    <section class="unit-section" id="sec-cm">
+      <div class="unit-header">
+        <h1 class="unit-title">厘米 (cm)</h1>
+        <p class="unit-subtitle">測量隨身物品與文具的長度</p>
+      </div>
+
+      <div class="horizontal-slider">
+        <div class="card">
+          <div class="card-value">1 cm</div>
+          <div class="card-icon">☝️</div>
+          <div class="card-desc">食指指甲的闊度</div>
+          <div class="card-footer">例 1 / 10</div>
+        </div>
+
+        <div class="card">
+          <div class="card-value">2 cm</div>
+          <div class="card-icon">🪙</div>
+          <div class="card-desc">5角硬幣的闊度</div>
+          <div class="card-footer">例 2 / 10</div>
+        </div>
+
+        <div class="card">
+          <div class="card-value">5 cm</div>
+          <div class="card-icon">🧼</div>
+          <div class="card-desc">一盒擦膠（抹字膠）的長度</div>
+          <div class="card-footer">例 3 / 10</div>
+        </div>
+
+        <div class="card">
+          <div class="card-value">10 cm</div>
+          <div class="card-icon">🧻</div>
+          <div class="card-desc">一包紙巾的長度</div>
+          <div class="card-footer">例 4 / 10</div>
+        </div>
+
+        <div class="card">
+          <div class="card-value">15 cm</div>
+          <div class="card-icon">📏</div>
+          <div class="card-desc">學生常用短直尺的長度</div>
+          <div class="card-footer">例 5 / 10</div>
+        </div>
+
+        <div class="card">
+          <div class="card-value">20 cm</div>
+          <div class="card-icon">🖐️</div>
+          <div class="card-desc">張開手掌（一拃）的長度</div>
+          <div class="card-footer">例 6 / 10</div>
+        </div>
+
+        <div class="card">
+          <div class="card-value">30 cm</div>
+          <div class="card-icon">📄</div>
+          <div class="card-desc">A4 紙張長邊的長度</div>
+          <div class="card-footer">例 7 / 10</div>
+        </div>
+
+        <div class="card">
+          <div class="card-value">50 cm</div>
+          <div class="card-icon">🎒</div>
+          <div class="card-desc">學校書包的高度</div>
+          <div class="card-footer">例 8 / 10</div>
+        </div>
+
+        <div class="card">
+          <div class="card-value">80 cm</div>
+          <div class="card-icon">🪑</div>
+          <div class="card-desc">課室學生課桌的高度</div>
+          <div class="card-footer">例 9 / 10</div>
+        </div>
+
+        <div class="card">
+          <div class="card-value">100 cm</div>
+          <div class="card-icon">🚪</div>
+          <div class="card-desc">課室門口的闊度<br>（等於 1 米！）</div>
+          <div class="card-footer">例 10 / 10 ➔ 銜接下一單位</div>
+        </div>
+      </div>
+
+      <div class="swipe-hint">👈 左右拖拽/手指滑動切換例子 ｜ 向下滑動切換米 👉</div>
+    </section>
+
+    <!-- 3. 米 Section -->
+    <section class="unit-section" id="sec-m">
+      <div class="unit-header">
+        <h1 class="unit-title">米 (m)</h1>
+        <p class="unit-subtitle">測量課室、車輛與建築物的長度</p>
+      </div>
+
+      <div class="horizontal-slider">
+        <div class="card">
+          <div class="card-value">1 m</div>
+          <div class="card-icon">🚪</div>
+          <div class="card-desc">課室門口的大約闊度</div>
+          <div class="card-footer">例 1 / 10</div>
+        </div>
+
+        <div class="card">
+          <div class="card-value">1.2 m</div>
+          <div class="card-icon">🧒</div>
+          <div class="card-desc">小學三年級學生的平均身高</div>
+          <div class="card-footer">例 2 / 10</div>
+        </div>
+
+        <div class="card">
+          <div class="card-value">2 m</div>
+          <div class="card-icon">📋</div>
+          <div class="card-desc">課室黑板 / 白板的高度</div>
+          <div class="card-footer">例 3 / 10</div>
+        </div>
+
+        <div class="card">
+          <div class="card-value">3 m</div>
+          <div class="card-icon">🏢</div>
+          <div class="card-desc">課室地台至天花板的高度</div>
+          <div class="card-footer">例 4 / 10</div>
+        </div>
+
+        <div class="card">
+          <div class="card-value">5 m</div>
+          <div class="card-icon">🚗</div>
+          <div class="card-desc">一輛私家車的長度</div>
+          <div class="card-footer">例 5 / 10</div>
+        </div>
+
+        <div class="card">
+          <div class="card-value">10 m</div>
+          <div class="card-icon">🚌</div>
+          <div class="card-desc">一輛雙層巴士的長度</div>
+          <div class="card-footer">例 6 / 10</div>
+        </div>
+
+        <div class="card">
+          <div class="card-value">18 m</div>
+          <div class="card-icon">🚃</div>
+          <div class="card-desc">港鐵車廂的長度</div>
+          <div class="card-footer">例 7 / 10</div>
+        </div>
+
+        <div class="card">
+          <div class="card-value">25 m</div>
+          <div class="card-icon">🏊‍♂️</div>
+          <div class="card-desc">學校短池游泳池的長度</div>
+          <div class="card-footer">例 8 / 10</div>
+        </div>
+
+        <div class="card">
+          <div class="card-value">100 m</div>
+          <div class="card-icon">🏃‍♂️</div>
+          <div class="card-desc">運動場直道跑道的長度</div>
+          <div class="card-footer">例 9 / 10</div>
+        </div>
+
+        <div class="card">
+          <div class="card-value">1,000 m</div>
+          <div class="card-icon">🏃‍♀️</div>
+          <div class="card-desc">運動場 400 米跑道繞 2.5 圈<br>（等於 1 公里！）</div>
+          <div class="card-footer">例 10 / 10 ➔ 銜接下一單位</div>
+        </div>
+      </div>
+
+      <div class="swipe-hint">👈 左右拖拽/手指滑動切換例子 ｜ 向下滑動切換公里 👉</div>
+    </section>
+
+    <!-- 4. 公里 Section -->
+    <section class="unit-section" id="sec-km">
+      <div class="unit-header">
+        <h1 class="unit-title">公里 (km)</h1>
+        <p class="unit-subtitle">測量社區、橋樑與城市間的距離</p>
+      </div>
+
+      <div class="horizontal-slider">
+        <div class="card">
+          <div class="card-value">1 km</div>
+          <div class="card-icon">🚶‍♂️</div>
+          <div class="card-desc">步行約 15 分鐘的距離</div>
+          <div class="card-footer">例 1 / 10</div>
+        </div>
+
+        <div class="card">
+          <div class="card-value">2 km</div>
+          <div class="card-icon">🚶‍♀️</div>
+          <div class="card-desc">輕鬆散步 30 分鐘的距離</div>
+          <div class="card-footer">例 2 / 10</div>
+        </div>
+
+        <div class="card">
+          <div class="card-value">3.5 km</div>
+          <div class="card-icon">🌉</div>
+          <div class="card-desc">香港青馬大橋的總長度</div>
+          <div class="card-footer">例 3 / 10</div>
+        </div>
+
+        <div class="card">
+          <div class="card-value">5 km</div>
+          <div class="card-icon">🏃‍♂️</div>
+          <div class="card-desc">慢跑約 30 分鐘的運動距離</div>
+          <div class="card-footer">例 4 / 10</div>
+        </div>
+
+        <div class="card">
+          <div class="card-value">10 km</div>
+          <div class="card-icon">🏅</div>
+          <div class="card-desc">馬拉松「10公里賽」的距離</div>
+          <div class="card-footer">例 5 / 10</div>
+        </div>
+
+        <div class="card">
+          <div class="card-value">16 km</div>
+          <div class="card-icon">🚇</div>
+          <div class="card-desc">港鐵觀塘綫全綫長度（調景嶺至黃埔）</div>
+          <div class="card-footer">例 6 / 10</div>
+        </div>
+
+        <div class="card">
+          <div class="card-value">22 km</div>
+          <div class="card-icon">🏙️</div>
+          <div class="card-desc">香港島東西兩端（柴灣至堅尼地城）距離</div>
+          <div class="card-footer">例 7 / 10</div>
+        </div>
+
+        <div class="card">
+          <div class="card-value">34 km</div>
+          <div class="card-icon">✈️</div>
+          <div class="card-desc">中環至香港國際機場的距離</div>
+          <div class="card-footer">例 8 / 10</div>
+        </div>
+
+        <div class="card">
+          <div class="card-value">55 km</div>
+          <div class="card-icon">🌉</div>
+          <div class="card-desc">港珠澳大橋的總長度</div>
+          <div class="card-footer">例 9 / 10</div>
+        </div>
+
+        <div class="card">
+          <div class="card-value">100 km</div>
+          <div class="card-icon">🚄</div>
+          <div class="card-desc">乘搭高鐵約 20 分鐘行駛的距離</div>
+          <div class="card-footer">例 10 / 10</div>
+        </div>
+      </div>
+
+      <div class="swipe-hint">👈 左右拖拽/手指滑動切換例子 ｜ 已到達最大單位 👉</div>
+    </section>
+
+  </div>
+
+  <script>
+    const verticalContainer = document.getElementById('verticalContainer');
+    const sections = document.querySelectorAll('.unit-section');
+    const navBtns = document.querySelectorAll('.nav-btn');
+    const sliders = document.querySelectorAll('.horizontal-slider');
+
+    // 互動直尺刻度與拖拉標記控制（更新為 15 cm 刻度）
+    const startX = 45;  // 0 cm 在 SVG 中的 X 座標
+    const endX = 755;   // 15 cm 在 SVG 中的 X 座標
+    const totalCm = 15; // 更改為 15 cm
+    const cmStep = (endX - startX) / totalCm; // 每 cm 約 47.33px
+    const mmStep = cmStep / 10;                // 每 mm 約 4.733px
+
+    let currentMm = 35; // 預設停在 3.5 cm (35 mm)
+    let isDraggingMarker = false;
+    let showAnswer = false;
+    let isQuestionMode = true; // true: 堂上提問模式, false: 自由探索模式
+
+    // 繪製 15cm 直尺與標記
+    function drawRuler() {
+      const svg = document.getElementById('rulerSvg');
+      if (!svg) return;
+
+      // 1. 黑色直尺底座
+      let html = `<rect x="15" y="32" width="770" height="175" rx="16" fill="#181818" stroke="#333" stroke-width="2"/>`;
+
+      // 2. 右下角單位標籤
+      html += `<text x="765" y="188" fill="rgba(255,255,255,0.8)" font-size="18" font-weight="bold" text-anchor="end">cm</text>`;
+
+      // 3. 繪製所有刻度（0-15 cm 及 1mm 刻度）
+      for (let i = 0; i <= totalCm * 10; i++) {
+        const x = startX + i * mmStep;
+        if (i % 10 === 0) {
+          const cmVal = i / 10;
+          html += `<line x1="${x}" y1="38" x2="${x}" y2="100" stroke="#ffffff" stroke-width="3" stroke-linecap="round"/>`;
+          html += `<text x="${x}" y="145" fill="#ffffff" font-size="18" font-weight="bold" text-anchor="middle">${cmVal}</text>`;
+        } else if (i % 5 === 0) {
+          html += `<line x1="${x}" y1="38" x2="${x}" y2="78" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/>`;
+        } else {
+          html += `<line x1="${x}" y1="38" x2="${x}" y2="58" stroke="rgba(255,255,255,0.75)" stroke-width="1.4"/>`;
+        }
+      }
+
+      // 4. 可拖動橙色倒三角形標記
+      const markerX = startX + currentMm * mmStep;
+      html += `
+        <g id="markerGroup" style="cursor: grab;">
+          <!-- 貫穿刻度的橙色指示虛線 -->
+          <line x1="${markerX}" y1="38" x2="${markerX}" y2="168" stroke="#FF5722" stroke-width="3" stroke-dasharray="4,3"/>
+          <!-- 橙色倒三角形標記 -->
+          <polygon points="${markerX - 14},8 ${markerX + 14},8 ${markerX},34" fill="#FF5722" stroke="#FFFFFF" stroke-width="2.5" style="filter: drop-shadow(0px 3px 5px rgba(0,0,0,0.4));"/>
+          <!-- 頂部圓點造型 -->
+          <circle cx="${markerX}" cy="8" r="5" fill="#FF5722" stroke="#FFFFFF" stroke-width="2"/>
+        </g>
+      `;
+
+      svg.innerHTML = html;
+    }
+
+    // 更新答案顯示
+    function updateAnswerText() {
+      const cmVal = (currentMm / 10).toFixed(1);
+      document.getElementById('ansText').textContent = `${cmVal} cm (${currentMm} mm)`;
+    }
+
+    // 模式切換（堂上提問 ↔ 自由探索）
+    function toggleRulerMode() {
+      isQuestionMode = !isQuestionMode;
+      const modeBtn = document.getElementById('rulerModeBtn');
+      const ansBtn = document.getElementById('toggleAnsBtn');
+      const box = document.getElementById('answerBox');
+
+      if (isQuestionMode) {
+        modeBtn.innerHTML = '🎯 堂上提問模式';
+        modeBtn.style.color = '#e65100';
+        modeBtn.style.background = '#fff3e0';
+        modeBtn.style.borderColor = '#ffe0b2';
+        ansBtn.style.display = 'inline-block';
+        showAnswer = false;
+        ansBtn.textContent = '👁️ 顯示答案';
+        box.style.display = 'none';
+      } else {
+        modeBtn.innerHTML = '🔍 自由探索模式';
+        modeBtn.style.color = '#0073C5';
+        modeBtn.style.background = '#e3f2fd';
+        modeBtn.style.borderColor = '#bbdefb';
+        ansBtn.style.display = 'none';
+        showAnswer = true;
+        box.style.display = 'block';
+      }
+      updateAnswerText();
+    }
+
+    // 顯示 / 隱藏答案開關
+    function toggleAnswer() {
+      showAnswer = !showAnswer;
+      const box = document.getElementById('answerBox');
+      const btn = document.getElementById('toggleAnsBtn');
+      if (showAnswer) {
+        box.style.display = 'block';
+        btn.textContent = '🙈 隱藏答案';
+      } else {
+        box.style.display = 'none';
+        btn.textContent = '👁️ 顯示答案';
+      }
+      updateAnswerText();
+    }
+
+    // 依據傳入的手指/滑鼠 X 座標計算並吸附刻度 (mm)
+    function setMarkerPosFromClientX(clientX) {
+      const svg = document.getElementById('rulerSvg');
+      const rect = svg.getBoundingClientRect();
+      const svgX = (clientX - rect.left) * (800 / rect.width);
+
+      const clampedX = Math.max(startX, Math.min(endX, svgX));
+      currentMm = Math.round((clampedX - startX) / mmStep);
+
+      drawRuler();
+      updateAnswerText();
+    }
+
+    // 初始化 Pointer Events
+    function initMarkerDrag() {
+      const svg = document.getElementById('rulerSvg');
+
+      function onPointerDown(e) {
+        isDraggingMarker = true;
+        svg.setPointerCapture(e.pointerId);
+        setMarkerPosFromClientX(e.clientX);
+      }
+
+      function onPointerMove(e) {
+        if (!isDraggingMarker) return;
+        setMarkerPosFromClientX(e.clientX);
+      }
+
+      function onPointerUp(e) {
+        if (isDraggingMarker) {
+          isDraggingMarker = false;
+          try { svg.releasePointerCapture(e.pointerId); } catch(err){}
+        }
+      }
+
+      svg.addEventListener('pointerdown', onPointerDown);
+      svg.addEventListener('pointermove', onPointerMove);
+      svg.addEventListener('pointerup', onPointerUp);
+      svg.addEventListener('pointercancel', onPointerUp);
+    }
+
+    // 1. 頂部按鈕導航
+    function goToUnit(index) {
+      sections[index].scrollIntoView({ behavior: 'smooth' });
+    }
+
+    // 2. 縱向滾動更新導航列按鈕狀態
+    verticalContainer.addEventListener('scroll', () => {
+      const scrollPosition = verticalContainer.scrollTop;
+      const height = window.innerHeight;
+
+      sections.forEach((sec, idx) => {
+        const top = sec.offsetTop;
+        if (scrollPosition >= top - height / 3 && scrollPosition < top + height - height / 3) {
+          navBtns.forEach(btn => btn.classList.remove('active'));
+          navBtns[idx].classList.add('active');
+        }
+      });
+      updateActiveCards();
+    });
+
+    // 3. 計算並確保「最接近螢幕正中央」的卡片高亮
+    function updateActiveCards() {
+      sliders.forEach(slider => {
+        const sliderRect = slider.getBoundingClientRect();
+        const sliderCenter = sliderRect.left + sliderRect.width / 2;
+
+        let closestCard = null;
+        let minDistance = Infinity;
+
+        const cards = slider.querySelectorAll('.card');
+        cards.forEach(card => {
+          const cardRect = card.getBoundingClientRect();
+          const cardCenter = cardRect.left + cardRect.width / 2;
+          const distance = Math.abs(sliderCenter - cardCenter);
+
+          if (distance < minDistance) {
+            minDistance = distance;
+            closestCard = card;
+          }
+        });
+
+        cards.forEach(card => {
+          if (card === closestCard) {
+            card.classList.add('active-card');
+          } else {
+            card.classList.remove('active-card');
+          }
+        });
+      });
+    }
+
+    // 4. 滑鼠拖拽卡片邏輯
+    sliders.forEach(slider => {
+      let isDown = false;
+      let startX;
+      let scrollLeft;
+
+      slider.addEventListener('mousedown', (e) => {
+        isDown = true;
+        startX = e.pageX - slider.offsetLeft;
+        scrollLeft = slider.scrollLeft;
+        slider.style.scrollSnapType = 'none';
+        slider.style.scrollBehavior = 'auto';
+      });
+
+      const stopDrag = () => {
+        if (!isDown) return;
+        isDown = false;
+        slider.style.scrollSnapType = 'x mandatory';
+        slider.style.scrollBehavior = 'smooth';
+        updateActiveCards();
+      };
+
+      slider.addEventListener('mouseleave', stopDrag);
+      slider.addEventListener('mouseup', stopDrag);
+
+      slider.addEventListener('mousemove', (e) => {
+        if (!isDown) return;
+        e.preventDefault();
+        const x = e.pageX - slider.offsetLeft;
+        const walk = (x - startX) * 1.3;
+        slider.scrollLeft = scrollLeft - walk;
+        updateActiveCards();
+      });
+
+      slider.addEventListener('scroll', updateActiveCards);
+    });
+
+    // 初始化直尺拖拉與卡片計算
+    drawRuler();
+    updateAnswerText();
+    initMarkerDrag();
+    window.addEventListener('resize', updateActiveCards);
+    setTimeout(updateActiveCards, 100);
+  </script>
+</body>
+</html>
